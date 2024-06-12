@@ -54,8 +54,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _requestPermissions() async {
     if (Platform.isAndroid) {
-      await Permission.storage.request();
-      if (await Permission.storage.isDenied) {
+      await Permission.manageExternalStorage.request();
+      if (await Permission.manageExternalStorage.isDenied) {
         // Handle the case where user denied the permissions
         print('Permissions denied');
       }
@@ -117,19 +117,14 @@ class _MyHomePageState extends State<MyHomePage> {
     await file.writeAsString('$_counterTwo');
   }
 
-  Future<void> exportCounterTwoPublic(BuildContext context) async {
-    await _openDirectoryPickerAndSaveFile(context);
-  }
-
-  Future<void> _openDirectoryPickerAndSaveFile(BuildContext context) async {
+  Future<String?> exportCounterTwoPublic() async {
     String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
     if (selectedDirectory != null) {
       final file = File('$selectedDirectory/counter_two_public.txt');
       await file.writeAsString('$_counterTwo');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('File saved to $selectedDirectory')),
-      );
+      return selectedDirectory; // Return the selected directory path to show the Snackbar later
     }
+    return null;
   }
 
   Future<void> _loadCounterOne() async {
@@ -162,7 +157,7 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
         actions: [
           IconButton(
-            icon: Icon(Icons.list),
+            icon: const Icon(Icons.list),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (context) => LogsPage(database: database),
             )),
@@ -192,7 +187,18 @@ class _MyHomePageState extends State<MyHomePage> {
               child: const Text("Export Counter 2 Private"),
             ),
             TextButton(
-              onPressed: () => exportCounterTwoPublic,
+              onPressed: () async {
+                final directory = await exportCounterTwoPublic();
+                if (directory != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('File saved to $directory')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Directory not selected')),
+                  );
+                }
+              },
               child: const Text("Export Counter 2 Public"),
             ),
           ],
@@ -204,15 +210,15 @@ class _MyHomePageState extends State<MyHomePage> {
           FloatingActionButton(
             onPressed: _incrementCounterOne,
             tooltip: 'Increment Counter 1',
-            child: const Icon(Icons.add),
             heroTag: 'counter1',
+            child: const Icon(Icons.add),
           ),
           const SizedBox(height: 10),
           FloatingActionButton(
             onPressed: _incrementCounterTwo,
             tooltip: 'Increment Counter 2',
-            child: const Icon(Icons.add),
             heroTag: 'counter2',
+            child: const Icon(Icons.add),
           ),
         ],
       ),
