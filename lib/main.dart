@@ -9,6 +9,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'logs_page.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
@@ -22,7 +24,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Storage Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
         useMaterial3: true,
       ),
       home: const MyHomePage(title: 'Our Storage Demo App'),
@@ -43,15 +45,6 @@ class _MyHomePageState extends State<MyHomePage> {
   int _counterOne = 0;
   int _counterTwo = 0;
   Database? database;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeDatabase();
-    _loadCounterOne();
-    _loadCounterTwo();
-    _requestPermissions();
-  }
 
   Future<void> _requestPermissions() async {
     if (Platform.isAndroid) {
@@ -79,6 +72,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  // INFO: Logs the counter increments to the database
   Future<void> _logCounterEvent(int counter, int oldValue, int newValue) async {
     if (database != null) {
       await database!.insert(
@@ -93,59 +87,53 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _incrementCounterOne() {
-    int oldValue = _counterOne;
-    setState(() {
-      _counterOne++;
-    });
-    _logCounterEvent(1, oldValue, _counterOne);
-  }
-
-  void _incrementCounterTwo() {
-    int oldValue = _counterTwo;
-    setState(() {
-      _counterTwo++;
-    });
-    _logCounterEvent(2, oldValue, _counterTwo);
-  }
-
+  //INFO: Exporting counter
+  //Exporting to Shared Preferences
   void exportCounterOne() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setInt('counter_one', _counterOne);
   }
 
+  //Exporting to private File
   Future<void> exportCounterTwoPrivate() async {
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/counter_two_private.txt');
     await file.writeAsString('$_counterTwo');
   }
 
+  //Exporting to public File with filepicker
   Future<String?> exportCounterTwoPublic() async {
     String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
     if (selectedDirectory != null) {
       final file = File('$selectedDirectory/counter_two_public.txt');
       await file.writeAsString('$_counterTwo');
-      return selectedDirectory; // Return the selected directory path to show the Snackbar later
+      return selectedDirectory; // Return the selected directory path to show in the Snackbar later
     }
     return null;
   }
 
+  //INFO: Loading Values
+  //Loading from Shared Preferences
   Future<void> _loadCounterOne() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _counterOne = prefs.getInt('counter_one') ?? 0;
     });
   }
 
+  //Loading from File
   Future<void> _loadCounterTwo() async {
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/counter_two_private.txt');
     if (await file.exists()) {
       String content = await file.readAsString();
+      if (!mounted) return;
       setState(() {
         _counterTwo = int.tryParse(content) ?? 0;
       });
     } else {
+      if (!mounted) return;
       setState(() {
         _counterTwo = 0;
       });
@@ -178,6 +166,10 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             TextButton(
               onPressed: exportCounterOne,
+              style: ButtonStyle(
+                foregroundColor: WidgetStateProperty.all<Color>(Colors.indigo),
+                backgroundColor: WidgetStateProperty.all<Color>(Colors.grey),
+              ),
               child: const Text("Export Counter 1"),
             ),
             const Text('Counter 2 has been incremented this many times:'),
@@ -187,21 +179,25 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             TextButton(
               onPressed: exportCounterTwoPrivate,
+              style: ButtonStyle(
+                foregroundColor: WidgetStateProperty.all<Color>(Colors.blueAccent),
+                backgroundColor: WidgetStateProperty.all<Color>(Colors.black),
+              ),
               child: const Text("Export Counter 2 Private"),
             ),
             TextButton(
               onPressed: () async {
                 final directory = await exportCounterTwoPublic();
                 if (directory != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('File saved to $directory')),
-                  );
+                  _showSnackbar('File saved to $directory', context);
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Directory not selected')),
-                  );
+                  _showSnackbar('Directory not selected', context);
                 }
               },
+              style: ButtonStyle(
+                foregroundColor: WidgetStateProperty.all<Color>(Colors.blueAccent),
+                backgroundColor: WidgetStateProperty.all<Color>(Colors.black),
+              ),
               child: const Text("Export Counter 2 Public"),
             ),
           ],
@@ -210,67 +206,59 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          FloatingActionButton(
+          TextButton(
             onPressed: _incrementCounterOne,
-            tooltip: 'Increment Counter 1',
-            heroTag: 'counter1',
-            child: const Icon(Icons.add),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.all<Color>(Colors.indigo),
+              foregroundColor: WidgetStateProperty.all<Color>(Colors.white),
+            ),
+            child: const Text("Increment Counter 1"),
           ),
           const SizedBox(height: 10),
-          FloatingActionButton(
+          TextButton(
             onPressed: _incrementCounterTwo,
-            tooltip: 'Increment Counter 2',
-            heroTag: 'counter2',
-            child: const Icon(Icons.add),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.all<Color>(Colors.blue),
+              foregroundColor: WidgetStateProperty.all<Color>(Colors.white),
+            ),
+            child: const Text("Increment Counter 2"),
           ),
         ],
       ),
     );
   }
-}
-
-class LogsPage extends StatelessWidget {
-  final Database? database;
-
-  const LogsPage({super.key, required this.database});
-
-  Future<List<Map<String, dynamic>>> _fetchLogs() async {
-    if (database != null) {
-      return await database!.query('Logs');
-    }
-    return [];
-  }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Logs'),
-      ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _fetchLogs(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return const Center(child: Text('Error fetching logs'));
-          }
-          final logs = snapshot.data!;
-          return ListView.builder(
-            itemCount: logs.length,
-            itemBuilder: (context, index) {
-              final log = logs[index];
-              return ListTile(
-                title: Text(
-                    'Counter ${log['counter']} - Time: ${log['timestamp']}'),
-                subtitle: Text(
-                    'Old Value: ${log['oldValue']} -> New Value: ${log['newValue']}'),
-              );
-            },
-          );
-        },
-      ),
-    );
+  void initState() {
+    super.initState();
+    _initializeDatabase();
+    _loadCounterOne();
+    _loadCounterTwo();
+    _requestPermissions();
+  }
+
+  void _showSnackbar(String message, BuildContext context) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
+
+  void _incrementCounterOne() {
+    int oldValue = _counterOne;
+    setState(() {
+      _counterOne++;
+    });
+    _logCounterEvent(1, oldValue, _counterOne);
+  }
+
+  void _incrementCounterTwo() {
+    int oldValue = _counterTwo;
+    setState(() {
+      _counterTwo++;
+    });
+    _logCounterEvent(2, oldValue, _counterTwo);
   }
 }
+
