@@ -228,8 +228,8 @@ class _HomePageState extends State<HomePage> {
             TextButton(
               onPressed: () => _pickAndReadFile(context),
               style: ButtonStyle(
-                foregroundColor: MaterialStateProperty.all<Color>(Colors.green),
-                backgroundColor: MaterialStateProperty.all<Color>(Colors.black),
+                foregroundColor: WidgetStateProperty.all<Color>(Colors.green),
+                backgroundColor: WidgetStateProperty.all<Color>(Colors.black),
               ),
               child: const Text("Open and Read File"),
             ),
