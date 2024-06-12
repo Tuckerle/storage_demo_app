@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -57,7 +58,9 @@ class _MyHomePageState extends State<MyHomePage> {
       await Permission.manageExternalStorage.request();
       if (await Permission.manageExternalStorage.isDenied) {
         // Handle the case where user denied the permissions
-        print('Permissions denied');
+        if (kDebugMode) {
+          print('Permissions denied');
+        }
       }
     }
   }
