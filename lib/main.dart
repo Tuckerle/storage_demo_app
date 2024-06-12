@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'display_page.dart';
 import 'logs_page.dart';
 
 void main() async {
@@ -27,24 +28,25 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Our Storage Demo App'),
+      home: const HomePage(title: 'Our Storage Demo App'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class HomePage extends StatefulWidget {
+  const HomePage({super.key, required this.title});
 
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _HomePageState extends State<HomePage> {
   int _counterOne = 0;
   int _counterTwo = 0;
   Database? database;
+  String _fileContent = '';
 
   Future<void> _requestPermissions() async {
     if (Platform.isAndroid) {
@@ -140,6 +142,29 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  // Read File Content and Navigate to Display Page
+  Future<void> _pickAndReadFile(BuildContext context) async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    if(mounted) {
+      if (result != null && result.files.isNotEmpty) {
+        String filePath = result.files.single.path!;
+        File file = File(filePath);
+        String fileContent = await file.readAsString();
+        if (!mounted) return;
+        setState(() {
+          _fileContent = fileContent;
+        });
+
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => DisplayPage(fileContent: _fileContent),
+          ));
+
+      } else {
+        _showSnackbar('No File selected', context);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -191,7 +216,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 if (directory != null) {
                   _showSnackbar('File saved to $directory', context);
                 } else {
-                  _showSnackbar('Directory not selected', context);
+                  _showSnackbar('No Directory selected', context);
                 }
               },
               style: ButtonStyle(
@@ -199,6 +224,14 @@ class _MyHomePageState extends State<MyHomePage> {
                 backgroundColor: WidgetStateProperty.all<Color>(Colors.black),
               ),
               child: const Text("Export Counter 2 Public"),
+            ),
+            TextButton(
+              onPressed: () => _pickAndReadFile(context),
+              style: ButtonStyle(
+                foregroundColor: MaterialStateProperty.all<Color>(Colors.green),
+                backgroundColor: MaterialStateProperty.all<Color>(Colors.black),
+              ),
+              child: const Text("Open and Read File"),
             ),
           ],
         ),
